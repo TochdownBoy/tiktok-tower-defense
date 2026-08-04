@@ -1,0 +1,149 @@
+import { Container, type AnimatedSprite, type Texture } from "pixi.js";
+import type { Enemy } from "./Enemy";
+import { Tower, type TowerOptions } from "./Tower";
+import { LightningEffect } from "../effects/LightningEffect";
+
+export interface TeslaTowerOptions extends TowerOptions {
+  attackRadius: number;
+  chainRadius?: number;
+  chainTargets?: number;
+  effectsLayer: Container;
+  levelFrames?: Texture[][];
+}
+
+const DEFAULT_CHAIN_RADIUS = 250;
+const DEFAULT_CHAIN_TARGETS = 4;
+
+export class TeslaTower extends Tower {
+  private readonly attackRadiusSquared: number;
+  private readonly chainRadiusSquared: number;
+  private readonly maxChainTargets: number;
+  private readonly effectsLayer: Container;
+  private readonly chainBuffer: Enemy[] = [];
+  private readonly levelFrames?: Texture[][];
+
+  constructor(sprite: AnimatedSprite, options: TeslaTowerOptions) {
+    super(sprite, options);
+
+    this.attackRadiusSquared = options.attackRadius * options.attackRadius;
+    const chainRadius = options.chainRadius ?? DEFAULT_CHAIN_RADIUS;
+    this.chainRadiusSquared = chainRadius * chainRadius;
+    this.maxChainTargets = options.chainTargets ?? DEFAULT_CHAIN_TARGETS;
+    this.effectsLayer = options.effectsLayer;
+    this.levelFrames = options.levelFrames;
+  }
+
+  override upgrade(): void {
+    super.upgrade();
+    const frames = this.levelFrames?.[this.level - 1];
+    if (frames) {
+      this.sprite.textures = frames;
+      this.sprite.gotoAndPlay(0);
+    }
+  }
+
+  protected override findPrimaryTarget(
+    enemies: Enemy[],
+    proposedHp: Map<Enemy, number>,
+  ): Enemy | undefined {
+    const tx = this.sprite.position.x;
+    const ty = this.sprite.position.y;
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      if ((proposedHp.get(enemy) ?? enemy.hp) <= 0) continue;
+
+      const dx = enemy.position.x - tx;
+      const dy = enemy.position.y - ty;
+      if (dx * dx + dy * dy <= this.attackRadiusSquared) {
+        return enemy;
+      }
+    }
+
+    return undefined;
+  }
+
+  protected override attack(
+    primary: Enemy,
+    enemies: Enemy[],
+    proposedHp: Map<Enemy, number>,
+  ): void {
+    const chain = this.findChainTargets(primary, enemies, proposedHp);
+    console.log(
+      "[debug] attack",
+      "enemies in array:",
+      enemies.length,
+      "chain size:",
+      chain.length,
+      chain.map((e) => Math.round(e.progress)),
+    );
+
+    let fromX = this.sprite.position.x;
+    let fromY = this.sprite.position.y;
+    for (const target of chain) {
+      this.dealDamage(target, proposedHp);
+      this.spawnLightning(fromX, fromY, target.position.x, target.position.y);
+      fromX = target.position.x;
+      fromY = target.position.y;
+    }
+  }
+
+  private findChainTargets(
+    primary: Enemy,
+    enemies: Enemy[],
+    proposedHp: Map<Enemy, number>,
+  ): Enemy[] {
+    const chain = this.chainBuffer;
+    chain.length = 0;
+    chain.push(primary);
+
+    let prev = primary;
+    for (let i = 0; i < this.maxChainTargets; i++) {
+      const next = this.findChainTarget(prev, enemies, proposedHp);
+      if (!next) break;
+      chain.push(next);
+      prev = next;
+    }
+
+    return chain;
+  }
+
+  private findChainTarget(
+    from: Enemy,
+    enemies: Enemy[],
+    proposedHp: Map<Enemy, number>,
+  ): Enemy | undefined {
+    const fx = from.position.x;
+    const fy = from.position.y;
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      if (this.isAlreadyHit(enemy)) continue;
+      if ((proposedHp.get(enemy) ?? enemy.hp) <= 0) continue;
+
+      const dx = enemy.position.x - fx;
+      const dy = enemy.position.y - fy;
+      if (dx * dx + dy * dy <= this.chainRadiusSquared) {
+        return enemy;
+      }
+    }
+
+    return undefined;
+  }
+
+  private isAlreadyHit(enemy: Enemy): boolean {
+    for (const hit of this.chainBuffer) {
+      if (hit === enemy) return true;
+    }
+    return false;
+  }
+
+  private spawnLightning(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+  ): void {
+    this.effectsLayer.addChild(new LightningEffect(fromX, fromY, toX, toY));
+  }
+}

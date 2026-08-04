@@ -1,0 +1,33 @@
+:root {
+  --dashboard-width: 360px;
+}
+
+.app-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0a0c14;
+}
+
+.game-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-container {
+  position: relative;
+  width: min(calc(100vw - var(--dashboard-width) - 72px), calc(100vh - 48px));
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: #000000;
+  overflow: hidden;
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.6);
+}

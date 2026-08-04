@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "image": "tesla-lvl1.png",
+    "scale": "1"
+  },
+  "animations": {
+    "tesla-lvl1": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ]
+  },
+  "frames": {
+    "0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "sourceSize": {
+        "w": 528,
+        "h": 744
+      }
+    },
+    "1": {
+      "frame": {
+        "x": 528,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "sourceSize": {
+        "w": 528,
+        "h": 744
+      }
+    },
+    "2": {
+      "frame": {
+        "x": 1056,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "sourceSize": {
+        "w": 528,
+        "h": 744
+      }
+    },
+    "3": {
+      "frame": {
+        "x": 1584,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 528,
+        "h": 744
+      },
+      "sourceSize": {
+        "w": 528,
+        "h": 744
+      }
+    }
+  }
+}

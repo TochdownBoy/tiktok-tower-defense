@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "image": "golden-mortar.png",
+    "scale": "1"
+  },
+  "animations": {
+    "golden-mortar": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ]
+  },
+  "frames": {
+    "0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "sourceSize": {
+        "w": 444,
+        "h": 592
+      }
+    },
+    "1": {
+      "frame": {
+        "x": 444,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "sourceSize": {
+        "w": 444,
+        "h": 592
+      }
+    },
+    "2": {
+      "frame": {
+        "x": 888,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "sourceSize": {
+        "w": 444,
+        "h": 592
+      }
+    },
+    "3": {
+      "frame": {
+        "x": 1332,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 592
+      },
+      "sourceSize": {
+        "w": 444,
+        "h": 592
+      }
+    }
+  }
+}

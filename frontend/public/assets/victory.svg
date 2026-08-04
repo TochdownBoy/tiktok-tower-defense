@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 150" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <linearGradient id="gradient-1" bx:pinned="true">
+      <stop offset="0" style="stop-color: rgb(205, 33, 176);"/>
+      <stop offset="0.341" style="stop-color: rgb(172, 57, 164);"/>
+      <stop offset="0.668" style="stop-color: rgb(193, 69, 185);"/>
+      <stop offset="1" style="stop-color: rgb(170, 55, 162);"/>
+    </linearGradient>
+    <linearGradient id="gradient-0" bx:pinned="true">
+      <stop offset="0" style="stop-color: rgb(214, 143, 116);"/>
+      <stop offset="0.287" style="stop-color: rgb(245, 168, 136);"/>
+      <stop offset="0.768" style="stop-color: rgb(239, 149, 115);"/>
+      <stop offset="1" style="stop-color: rgb(233, 151, 119);"/>
+    </linearGradient>
+    <linearGradient id="gradient-2" bx:pinned="true">
+      <stop offset="0" style="stop-color: rgb(163, 92, 63);"/>
+      <stop offset="1" style="stop-color: rgb(191, 117, 89);"/>
+    </linearGradient>
+    <linearGradient id="gradient-3" bx:pinned="true">
+      <stop offset="0" style="stop-color: rgb(152, 154, 19);"/>
+      <stop offset="0.499" style="stop-color: rgb(200, 184, 19);"/>
+      <stop offset="1" style="stop-color: rgb(205, 208, 2);"/>
+    </linearGradient>
+    <linearGradient id="gradient-4" bx:pinned="true">
+      <stop offset="0.319" style="stop-color: rgb(255, 255, 0);"/>
+      <stop offset="0.685" style="stop-color: rgb(252, 255, 173);"/>
+      <stop offset="1" style="stop-color: rgb(239, 255, 0);"/>
+    </linearGradient>
+    <linearGradient id="gradient-3-0" href="#gradient-3" gradientUnits="userSpaceOnUse" x1="500.735" y1="18.724" x2="500.735" y2="129.815"/>
+    <style bx:fonts="ADLaM Display">@import url(https://fonts.googleapis.com/css2?family=ADLaM+Display%3Aital%2Cwght%400%2C400&amp;display=swap);</style>
+    <linearGradient id="gradient-4-0" href="#gradient-4" gradientUnits="userSpaceOnUse" x1="432.21" y1="62.157" x2="432.21" y2="98.697"/>
+  </defs>
+  <path d="M 112.526 29.803 C 113.42 26.01 30.575 29.285 30.462 32.357 C 25.33 36.805 51.736 77.261 55.644 73.874 C 50.591 73.298 26.526 115.107 35.453 116.979 C 33.703 118.729 112.339 119.141 114.218 117.262 L 112.526 29.803 Z" style="fill: rgb(166, 158, 30);"/>
+  <path d="M 972.543 29.693 C 974.068 26.684 888.606 27.328 887.644 29.228 C 882.309 33.791 909.759 75.291 913.821 71.816 C 908.569 71.225 883.553 114.114 892.833 116.034 C 891.013 117.829 973.184 114.238 975.138 112.311 L 972.543 29.693 Z" style="transform-origin: 931.048px 72.07px 0px; fill: rgb(166, 154, 30);" transform="matrix(-1, 0, 0, -1, 0, 0)"/>
+  <path d="M 959.557 32.795 L 888.256 33.754 C 888.054 33.754 909.182 71.907 910.863 71.907 C 910.668 67.756 888.506 106.239 888.731 111.018 C 888.724 111.025 961.553 107.726 961.929 107.346 L 959.4 97.448 C 963.328 95.316 909.771 100.743 906.413 101.285 L 919.875 71.748 C 918.827 70.706 897.773 36.324 902.307 40.859 C 902.134 40.576 959.821 42.214 959.4 40.299 L 959.557 32.795 Z" style="transform-origin: 925.092px 71.906px 0px; fill: rgb(255, 238, 232);" transform="matrix(-1, 0, 0, -1, -0.00004, -0.000004)"/>
+  <path d="M 111.197 36.26 L 40.494 37.202 C 36.986 36.222 61.245 74.67 62.912 74.67 C 62.801 71.257 40.244 102.326 40.965 113.078 C 40.958 113.085 113.382 112.728 113.755 112.355 L 112.071 103.871 C 115.966 101.777 58.909 102.766 55.58 103.298 L 71.848 74.513 C 70.809 73.49 50.544 40.706 54.427 44.179 C 54.256 43.901 111.459 45.51 111.041 43.629 L 111.197 36.26 Z" style="fill: rgb(255, 236, 229);"/>
+  <path d="M 918.957 116.095 L 886.277 31.831 L 920.802 32.493 L 918.957 116.095 Z" style="transform-origin: 903.538px 73.962px 0px; fill: rgba(63, 56, 10, 0.3);" transform="matrix(-1, 0, 0, -1, 0, 0)"/>
+  <path d="M 109.887 30.69 L 91.212 118.299 L 110.941 117.611 L 109.887 30.69 Z" style="fill: rgba(72, 71, 10, 0.392);"/>
+  <path d="M 113.625 22.607 C 97.032 20.679 362.124 13.923 807.126 24.603 C 833.095 25.226 863.243 21.768 888.36 24.444 C 897.334 62.903 891.544 133.751 889.668 125.712 C 850.952 132.915 79.033 129.677 112.96 123.365 C 106.909 121.096 106.179 19.815 113.625 22.607 Z" style="fill: url(&quot;#gradient-3-0&quot;);"/>
+  <path d="M 109.654 31.904 L 889.77 32.015 L 891.36 41.533 L 108.797 39.288 L 109.654 31.904 Z" style="fill: rgb(255, 255, 229);"/>
+  <path d="M 109.815 109.688 L 892.234 109.219 L 891.529 118.541 L 110.603 116.494 L 109.815 109.688 Z" style="fill: rgb(255, 249, 247);"/>
+  <text style="fill: rgba(0, 0, 0, 0.498); font-family: &quot;ADLaM Display&quot;; font-size: 28px; letter-spacing: -2.7px; white-space: pre;" transform="matrix(5.584918, 0, 0, 5.978973, -1892.46936, -376.152557)" x="374.798" y="85.925">VICTORY!</text>
+  <text style="fill: url(&quot;#gradient-4-0&quot;); font-family: &quot;ADLaM Display&quot;; font-size: 28px; letter-spacing: -2.7px; white-space: pre;" transform="matrix(5.464205, 0, 0, 5.849742, -1847.964478, -375.474152)" x="374.798" y="85.925">VICTORY!</text>
+</svg>
