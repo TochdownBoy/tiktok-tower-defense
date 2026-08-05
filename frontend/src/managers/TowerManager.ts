@@ -20,6 +20,14 @@ export class TowerManager {
     return this.towers.length;
   }
 
+  getTowers(): Tower[] {
+    return this.towers;
+  }
+
+  getFirstTowerByType(type: Tower["type"]): Tower | undefined {
+    return this.towers.find((tower) => tower.type === type);
+  }
+
   getTowerAtSpot(order: number): Tower | undefined {
     return this.towers.find((tower) => tower.spot.order === order);
   }
@@ -29,6 +37,10 @@ export class TowerManager {
     if (index === -1) return undefined;
     const [tower] = this.towers.splice(index, 1);
     return tower;
+  }
+
+  clear(): Tower[] {
+    return this.towers.splice(0, this.towers.length);
   }
 
   update(deltaTime: number, enemies: Enemy[]): void {

@@ -39,9 +39,12 @@ export function Dashboard() {
         />
         <EnemyControls onSpawnEnemy={handleSpawnEnemy} />
         <WaveControls
+          isActive={state?.isActive ?? false}
           isPaused={state?.isPaused ?? false}
           speed={state?.speed ?? 1}
-          onStartWave={() => engine?.startWave()}
+          onStartGame={() => engine?.startGame()}
+          onNextWave={() => engine?.startNextWave()}
+          onFinishGame={() => engine?.finishGame()}
           onPause={() => engine?.pause()}
           onResume={() => engine?.resume()}
           onRestart={() => void engine?.restart()}

@@ -41,6 +41,15 @@ export class BulletManager {
     this.container.addChild(bullet.sprite);
   }
 
+  clear(): void {
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const bullet = this.bullets[i];
+      this.container.removeChild(bullet.sprite);
+      bullet.sprite.destroy();
+    }
+    this.bullets.length = 0;
+  }
+
   update(deltaTime: number): void {
     for (const bullet of this.bullets) {
       bullet.update(deltaTime);

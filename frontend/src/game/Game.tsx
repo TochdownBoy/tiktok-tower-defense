@@ -20,12 +20,18 @@ export function Game() {
         return;
       }
       store.attach(engine);
+      if (import.meta.env.DEV) {
+        window.gameApi = engine;
+      }
     })();
 
     return () => {
       active = false;
       store.detach();
       engine.destroy();
+      if (import.meta.env.DEV && window.gameApi === engine) {
+        delete window.gameApi;
+      }
     };
   }, [store]);
 

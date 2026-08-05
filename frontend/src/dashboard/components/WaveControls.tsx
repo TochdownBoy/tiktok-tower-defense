@@ -1,9 +1,12 @@
 const SPEEDS = [1, 2, 4];
 
 interface WaveControlsProps {
+  isActive: boolean;
   isPaused: boolean;
   speed: number;
-  onStartWave: () => void;
+  onStartGame: () => void;
+  onNextWave: () => void;
+  onFinishGame: () => void;
   onPause: () => void;
   onResume: () => void;
   onRestart: () => void;
@@ -11,9 +14,12 @@ interface WaveControlsProps {
 }
 
 export function WaveControls({
+  isActive,
   isPaused,
   speed,
-  onStartWave,
+  onStartGame,
+  onNextWave,
+  onFinishGame,
   onPause,
   onResume,
   onRestart,
@@ -21,10 +27,16 @@ export function WaveControls({
 }: WaveControlsProps) {
   return (
     <section className="panel">
-      <h2 className="panel__title">Waves</h2>
+      <h2 className="panel__title">Match</h2>
       <div className="button-row">
-        <button type="button" onClick={onStartWave}>
-          Start Wave
+        <button type="button" onClick={onStartGame}>
+          Start Game
+        </button>
+        <button type="button" disabled={!isActive} onClick={onNextWave}>
+          Next Wave
+        </button>
+        <button type="button" disabled={!isActive} onClick={onFinishGame}>
+          Finish Game
         </button>
       </div>
       <div className="button-row">

@@ -32,6 +32,16 @@ export class EnemyManager {
     return enemy;
   }
 
+  clear(): void {
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      this.container.removeChild(enemy.container);
+      enemy.container.destroy();
+    }
+    this.enemies.length = 0;
+    this.rebuildAliveEnemies();
+  }
+
   get aliveEnemies(): Enemy[] {
     return this.aliveEnemiesList;
   }

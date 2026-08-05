@@ -11,10 +11,12 @@ import {
 import { waypoints } from "../constants/waypoints";
 import { WAVES } from "../constants/waves";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "../constants/world";
+import { SpotInfo } from "../constants/spot";
+import { ENEMY_CONFIGS } from "../constants/enemies";
 import { TeslaTower } from "../entities/TeslaTower";
 import { DendroTower } from "../entities/DendroTower";
 import { FrostTower } from "../entities/FrostTower";
-import { MAX_TOWER_LEVEL } from "../entities/Tower";
+import { MAX_STAR_LEVEL, type Tower } from "../entities/Tower";
 import { DendroBullet } from "../entities/DendroBullet";
 import type { Enemy } from "../entities/Enemy";
 import { EnemyManager } from "../managers/EnemyManager";
@@ -24,10 +26,19 @@ import { WaveManager } from "../managers/WaveManager";
 import type { EnemyType } from "../types/enemy";
 import type { SpotInfoType } from "../types/spot";
 import type { TowerType } from "../types/tower";
+import type {
+  GameActionResult,
+  MonsterActionResult,
+  MonsterSpawnInput,
+  TurretActionResult,
+  TurretGiftInput,
+  TurretGiftResult,
+  TurretSpawnInput,
+} from "../types/game";
+import { formatTimer } from "../utils/formatTime";
 
 export interface GameState {
   hp: number;
-  gold: number;
   wave: number;
   enemies: number;
   towers: number;
@@ -35,6 +46,11 @@ export interface GameState {
   speed: number;
   isPaused: boolean;
   isVictory: boolean;
+  isActive: boolean;
+  currentWave: number;
+  totalWaves: number;
+  waveDurationSeconds: number;
+  remainingWaveSeconds: number;
 }
 
 export type GameStateListener = (state: GameState) => void;
@@ -42,42 +58,39 @@ export type GameStateListener = (state: GameState) => void;
 const PORTAL_SPIN_SPEED = 0.4;
 
 const PLAYER_START_HP = 100;
-const PLAYER_START_GOLD = 1000;
 const HP_LOSS_PER_ENEMY = 5;
 
-const GOLD_REWARDS: Record<EnemyType, number> = {
-  Slime1: 10,
-  Slime2: 20,
-  Slime3: 30,
-  Slime4: 45,
-  Slime5: 60,
-  Tank: 50,
-};
+const WAVE_DURATION_SECONDS = 30;
 
-const TOWER_COSTS: Record<TowerType, number> = {
-  Tesla: 100,
-  Dendro: 150,
-  Frost: 120,
-};
-
-const SELL_REFUND_RATIO = 0.5;
-const UPGRADE_COST_BASE_RATIO = 0.6;
+const TOWER_TYPES: TowerType[] = ["Tesla", "Dendro", "Frost"];
 
 const STATE_EMIT_INTERVAL = 0.2;
 
-const TESLA_DAMAGE = 300;
+const TESLA_DAMAGE = 400;
 const TESLA_ATTACK_SPEED = 2;
 const TESLA_ANIMATION_SPEED = 0.1;
 const TESLA_ATTACK_RADIUS = 260;
 const TESLA_CHAIN_RADIUS = 250;
 
-const DENDRO_DAMAGE = 500;
+const DENDRO_DAMAGE = 650;
 const DENDRO_ATTACK_SPEED = 2;
 const DENDRO_ANIMATION_SPEED = 0.05;
 
-const FROST_DAMAGE = 250;
+const FROST_DAMAGE = 350;
 const FROST_ATTACK_SPEED = 1.5;
 const FROST_ANIMATION_SPEED = 0.1;
+
+function resolveTowerType(value: string): TowerType | undefined {
+  const target = value.trim().toLowerCase();
+  return TOWER_TYPES.find((type) => type.toLowerCase() === target);
+}
+
+function resolveEnemyType(value: string): EnemyType | undefined {
+  const target = value.trim().toLowerCase();
+  return (Object.keys(ENEMY_CONFIGS) as EnemyType[]).find(
+    (type) => type.toLowerCase() === target,
+  );
+}
 
 export class GameEngine {
   private app?: Application;
@@ -86,11 +99,14 @@ export class GameEngine {
   private effectsLayer?: Container;
   private portal?: Sprite;
   private victoryText?: Text;
+  private waveBannerText?: Text;
+  private waveTimerText?: Text;
 
-  private teslaLevelFrames?: Texture[][];
+  private teslaFrames?: Texture[];
   private dendroFrames?: Texture[];
   private frostFrames?: Texture[];
   private enemyTextures?: Record<EnemyType, Texture>;
+  private starTexture?: Texture;
 
   private towerManager?: TowerManager;
   private enemyManager?: EnemyManager;
@@ -100,10 +116,12 @@ export class GameEngine {
 
   private destroyed = false;
   private paused = false;
+  private isActive = false;
   private gameSpeed = 1;
-  private gold = PLAYER_START_GOLD;
   private hp = PLAYER_START_HP;
   private emitTimer = 0;
+  private lastBannerLabel = "";
+  private lastTimerLabel = "";
 
   private readonly listeners = new Set<GameStateListener>();
 
@@ -112,8 +130,8 @@ export class GameEngine {
     this.container = container;
     this.destroyed = false;
     this.paused = false;
+    this.isActive = false;
     this.gameSpeed = 1;
-    this.gold = PLAYER_START_GOLD;
     this.hp = PLAYER_START_HP;
 
     const app = new Application();
@@ -149,6 +167,26 @@ export class GameEngine {
     waveBannerText.anchor.set(0.5, 0.5);
     waveBannerText.position.set(waveBanner.x, waveBanner.y);
     world.addChild(waveBannerText);
+    this.waveBannerText = waveBannerText;
+    this.lastBannerLabel = "WAVE 1";
+
+    const waveTimerText = new Text({
+      text: "",
+      style: {
+        fontFamily: "ADLaM Display",
+        fontSize: 56,
+        fontWeight: "700",
+        fill: 0xffd700,
+        stroke: { color: 0x000000, width: 4 },
+      },
+    });
+    waveTimerText.anchor.set(0, 0.5);
+    waveTimerText.position.set(
+      waveBannerText.x + waveBannerText.width / 2 + 28,
+      waveBannerText.y,
+    );
+    world.addChild(waveTimerText);
+    this.waveTimerText = waveTimerText;
 
     const portalTexture = await Assets.load("/assets/portal.png");
     const portal = new Sprite(portalTexture);
@@ -158,27 +196,10 @@ export class GameEngine {
     world.addChild(portal);
     this.portal = portal;
 
-    const teslaLevel1Sheet = await Assets.load(
-      "/assets/tesla/lvl1/tesla-lvl1.json",
-    );
-    const teslaLevel1Frames = teslaLevel1Sheet.animations["tesla-lvl1"];
-    const teslaLevel2Frames = await Promise.all([
-      Assets.load("/assets/tesla/lvl2/00.png"),
-      Assets.load("/assets/tesla/lvl2/10.png"),
-      Assets.load("/assets/tesla/lvl2/20.png"),
-      Assets.load("/assets/tesla/lvl2/30.png"),
-    ]);
-    const teslaLevel3Frames = await Promise.all([
-      Assets.load("/assets/tesla/lvl3/00.png"),
-      Assets.load("/assets/tesla/lvl3/10.png"),
-      Assets.load("/assets/tesla/lvl3/20.png"),
-      Assets.load("/assets/tesla/lvl3/30.png"),
-    ]);
-    this.teslaLevelFrames = [
-      teslaLevel1Frames,
-      teslaLevel2Frames,
-      teslaLevel3Frames,
-    ];
+    const teslaSheet = await Assets.load("/assets/tesla/lvl1/tesla-lvl1.json");
+    this.teslaFrames = teslaSheet.animations["tesla-lvl1"];
+
+    this.starTexture = await Assets.load("/assets/star.svg");
 
     this.enemyTextures = {
       Slime1: await Assets.load("/assets/enemies/slime1.png"),
@@ -227,13 +248,14 @@ export class GameEngine {
     );
 
     const waveManager = new WaveManager(enemyManager, WAVES, {
+      waveDurationSeconds: WAVE_DURATION_SECONDS,
       onWaveStart: (wave) => {
-        waveBannerText.text = `WAVE ${wave}`;
-      },
-      onVictory: () => {
-        if (this.victoryText) {
-          this.victoryText.visible = true;
-        }
+        if (!this.waveBannerText) return;
+        const label = `WAVE ${wave}`;
+        this.waveBannerText.text = label;
+        this.lastBannerLabel = label;
+        this.lastTimerLabel = "";
+        this.updateWaveBanner();
       },
     });
     this.waveManager = waveManager;
@@ -260,8 +282,6 @@ export class GameEngine {
     world.addChild(victoryText);
     this.victoryText = victoryText;
 
-    waveManager.startWave(0);
-
     this.resizeWorld();
     app.renderer.on("resize", this.resizeWorld);
 
@@ -278,6 +298,7 @@ export class GameEngine {
   destroy(): void {
     this.destroyed = true;
     this.paused = false;
+    this.isActive = false;
 
     if (this.app) {
       this.app.ticker.remove(this.update);
@@ -289,10 +310,13 @@ export class GameEngine {
     this.effectsLayer = undefined;
     this.portal = undefined;
     this.victoryText = undefined;
-    this.teslaLevelFrames = undefined;
+    this.waveBannerText = undefined;
+    this.waveTimerText = undefined;
+    this.teslaFrames = undefined;
     this.dendroFrames = undefined;
     this.frostFrames = undefined;
     this.enemyTextures = undefined;
+    this.starTexture = undefined;
     this.towerManager = undefined;
     this.enemyManager = undefined;
     this.waveManager = undefined;
@@ -307,17 +331,225 @@ export class GameEngine {
     }
   }
 
-  spawnTower(type: TowerType, spot: SpotInfoType): void {
-    if (this.gold < TOWER_COSTS[type]) return;
-
-    this.gold -= TOWER_COSTS[type];
-    if (type === "Tesla") {
-      this.placeTeslaTower(spot);
-    } else if (type === "Dendro") {
-      this.placeDendroTower(spot);
-    } else {
-      this.placeFrostTower(spot);
+  startGame(): GameActionResult {
+    if (this.isActive) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "game_already_active",
+      };
     }
+    if (!this.towerManager || !this.waveManager || !this.enemyManager) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+
+    this.clearAllTurrets();
+    this.clearAllBullets();
+    this.clearAllMonsters();
+    this.hp = PLAYER_START_HP;
+    this.isActive = true;
+
+    if (this.victoryText) {
+      this.victoryText.visible = false;
+    }
+
+    this.waveManager.reset();
+    this.waveManager.startWave(0);
+    this.emitState();
+    return { success: true, action: "game_started" };
+  }
+
+  startNextWave(): GameActionResult {
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+    if (!this.waveManager) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (
+      this.waveManager.isVictory ||
+      this.waveManager.currentWave >= WAVES.length
+    ) {
+      return { success: false, action: "skipped", reason: "no_next_wave" };
+    }
+
+    this.waveManager.nextWave();
+    this.emitState();
+    return { success: true, action: "wave_started" };
+  }
+
+  startWave(): GameActionResult {
+    return this.startNextWave();
+  }
+
+  finishGame(): GameActionResult {
+    return this.finishGameInternal(false);
+  }
+
+  handleTurretGift(input: TurretGiftInput): TurretGiftResult {
+    const username = input?.username?.trim();
+    const turretType = input?.turretType;
+    if (!username || typeof turretType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveTowerType(turretType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "turret_type_not_found",
+      };
+    }
+
+    if (this.getFreeSpots().length > 0) {
+      return this.spawnTurret({ username, turretType: type });
+    }
+
+    return this.upgradeFirstTurretByType({ username, turretType: type });
+  }
+
+  spawnTurret(input: TurretSpawnInput): TurretActionResult {
+    const username = input?.username?.trim();
+    const turretType = input?.turretType;
+    if (!username || typeof turretType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveTowerType(turretType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "turret_type_not_found",
+      };
+    }
+
+    const freeSpots = this.getFreeSpots();
+    if (freeSpots.length === 0) {
+      return { success: false, action: "skipped", reason: "no_free_slots" };
+    }
+
+    const spot = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+    const tower = this.createTurret(type, spot, username);
+    if (!tower) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+
+    this.emitState();
+    return {
+      success: true,
+      action: "turret_spawned",
+      data: {
+        type: tower.type,
+        spotOrder: spot.order,
+        spot,
+        level: tower.starLevel,
+      },
+    };
+  }
+
+  upgradeFirstTurretByType(input: TurretSpawnInput): TurretActionResult {
+    const username = input?.username?.trim();
+    const turretType = input?.turretType;
+    if (!username || typeof turretType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveTowerType(turretType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "turret_type_not_found",
+      };
+    }
+
+    const tower = this.towerManager?.getFirstTowerByType(type);
+    if (!tower) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "matching_turret_not_found",
+      };
+    }
+    if (tower.starLevel >= MAX_STAR_LEVEL) {
+      return { success: false, action: "skipped", reason: "turret_max_level" };
+    }
+
+    tower.upgradeStarLevel();
+    tower.setNickname(username);
+    this.emitState();
+    return {
+      success: true,
+      action: "turret_upgraded",
+      data: {
+        type: tower.type,
+        spotOrder: tower.spot.order,
+        spot: tower.spot,
+        level: tower.starLevel,
+      },
+    };
+  }
+
+  spawnMonster(input: MonsterSpawnInput): MonsterActionResult {
+    const monsterType = input?.monsterType;
+    if (typeof monsterType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveEnemyType(monsterType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "monster_type_not_found",
+      };
+    }
+    if (!this.enemyManager) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+
+    this.enemyManager.spawnEnemy(type);
+    this.emitState();
+    return { success: true, action: "monster_spawned", data: { type } };
+  }
+
+  clearAllTurrets(): void {
+    if (!this.towerManager) return;
+    const towers = this.towerManager.clear();
+    for (const tower of towers) {
+      tower.destroy();
+    }
+    this.emitState();
+  }
+
+  clearAllMonsters(): void {
+    if (!this.enemyManager) return;
+    this.enemyManager.clear();
+    this.emitState();
+  }
+
+  getGameState(): GameState {
+    return this.getState();
+  }
+
+  spawnTower(type: TowerType, spot: SpotInfoType): void {
+    if (this.isSpotOccupied(spot.order)) return;
+
+    this.createTurret(type, spot, "");
     this.emitState();
   }
 
@@ -326,9 +558,7 @@ export class GameEngine {
     const tower = this.towerManager.removeTowerAtSpot(spot.order);
     if (!tower) return;
 
-    this.gold += Math.round(tower.investedGold * SELL_REFUND_RATIO);
-    tower.sprite.parent?.removeChild(tower.sprite);
-    tower.sprite.destroy();
+    tower.destroy();
     this.emitState();
   }
 
@@ -336,26 +566,14 @@ export class GameEngine {
     if (!this.towerManager) return;
     const tower = this.towerManager.getTowerAtSpot(spot.order);
     if (!tower) return;
-    if (tower.level >= MAX_TOWER_LEVEL) return;
+    if (tower.starLevel >= MAX_STAR_LEVEL) return;
 
-    const upgradeCost = Math.round(
-      tower.cost * UPGRADE_COST_BASE_RATIO * tower.level,
-    );
-    if (this.gold < upgradeCost) return;
-
-    this.gold -= upgradeCost;
-    tower.investedGold += upgradeCost;
-    tower.upgrade();
+    tower.upgradeStarLevel();
     this.emitState();
   }
 
   spawnEnemy(type: EnemyType): void {
     this.enemyManager?.spawnEnemy(type);
-    this.emitState();
-  }
-
-  startWave(): void {
-    this.waveManager?.nextWave();
     this.emitState();
   }
 
@@ -377,7 +595,6 @@ export class GameEngine {
   getState(): GameState {
     return {
       hp: this.hp,
-      gold: this.gold,
       wave: this.waveManager?.currentWave ?? 0,
       enemies: this.enemyManager?.getAliveEnemies().length ?? 0,
       towers: this.towerManager?.towerCount ?? 0,
@@ -385,6 +602,13 @@ export class GameEngine {
       speed: this.gameSpeed,
       isPaused: this.paused,
       isVictory: this.waveManager?.isVictory ?? false,
+      isActive: this.isActive,
+      currentWave: this.waveManager?.currentWave ?? 0,
+      totalWaves: WAVES.length,
+      waveDurationSeconds: WAVE_DURATION_SECONDS,
+      remainingWaveSeconds: this.isActive
+        ? (this.waveManager?.remainingSeconds ?? 0)
+        : 0,
     };
   }
 
@@ -409,7 +633,15 @@ export class GameEngine {
 
     const deltaTime = (ticker.deltaMS / 1000) * this.gameSpeed;
 
-    this.waveManager.update(deltaTime);
+    if (this.isActive) {
+      this.waveManager.update(deltaTime);
+      if (this.waveManager.isVictory) {
+        this.finishGameInternal(true);
+      } else {
+        this.updateWaveBanner();
+      }
+    }
+
     this.enemyManager.update(deltaTime);
     this.towerManager.update(deltaTime, this.enemyManager.getAliveEnemies());
 
@@ -421,6 +653,61 @@ export class GameEngine {
       this.emitState();
     }
   };
+
+  private finishGameInternal(showVictory: boolean): GameActionResult {
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    this.isActive = false;
+    this.clearAllBullets();
+    this.clearAllTurrets();
+    this.clearAllMonsters();
+    this.waveManager?.reset();
+
+    if (this.victoryText) {
+      this.victoryText.visible = showVictory;
+    }
+    this.resetWaveBanner();
+    this.emitState();
+    return { success: true, action: "game_finished" };
+  }
+
+  private clearAllBullets(): void {
+    this.frostBulletManager?.clear();
+    this.dendroBulletManager?.clear();
+  }
+
+  private createTurret(
+    type: TowerType,
+    spot: SpotInfoType,
+    username: string,
+  ): Tower | undefined {
+    let tower: Tower | undefined;
+    if (type === "Tesla") {
+      tower = this.placeTeslaTower(spot);
+    } else if (type === "Dendro") {
+      tower = this.placeDendroTower(spot);
+    } else {
+      tower = this.placeFrostTower(spot);
+    }
+    if (tower && username) {
+      tower.setNickname(username);
+    }
+    return tower;
+  }
+
+  private getFreeSpots(): SpotInfoType[] {
+    if (!this.towerManager) return [];
+    const occupied = new Set(
+      this.towerManager.getTowers().map((tower) => tower.spot.order),
+    );
+    return SpotInfo.filter((spot) => !occupied.has(spot.order));
+  }
+
+  private isSpotOccupied(order: number): boolean {
+    return this.towerManager?.getTowerAtSpot(order) !== undefined;
+  }
 
   private readonly resizeWorld = (): void => {
     if (!this.app || !this.world) return;
@@ -437,103 +724,131 @@ export class GameEngine {
     );
   };
 
-  private placeTeslaTower(spot: SpotInfoType): void {
-    if (
-      !this.world ||
-      !this.towerManager ||
-      !this.teslaLevelFrames ||
-      !this.effectsLayer
-    ) {
+  private updateWaveBanner(): void {
+    if (!this.waveBannerText || !this.waveTimerText || !this.waveManager) {
       return;
     }
 
-    const sprite = new AnimatedSprite(this.teslaLevelFrames[0]);
-    sprite.position.set(spot.x, spot.y);
-    sprite.scale.set(0.5);
-    this.world.addChild(sprite);
+    const label = `WAVE ${this.waveManager.currentWave}`;
+    if (label !== this.lastBannerLabel) {
+      this.waveBannerText.text = label;
+      this.lastBannerLabel = label;
+      this.lastTimerLabel = "";
+    }
 
-    this.towerManager.addTower(
-      new TeslaTower(sprite, {
-        damage: TESLA_DAMAGE,
-        attackSpeed: TESLA_ATTACK_SPEED,
-        animationSpeed: TESLA_ANIMATION_SPEED,
-        attackRadius: TESLA_ATTACK_RADIUS,
-        chainRadius: TESLA_CHAIN_RADIUS,
-        effectsLayer: this.effectsLayer,
-        spot,
-        type: "Tesla",
-        cost: TOWER_COSTS.Tesla,
-        levelFrames: this.teslaLevelFrames,
-      }),
-    );
+    const timeLabel = formatTimer(this.waveManager.remainingSeconds);
+    if (timeLabel !== this.lastTimerLabel) {
+      this.waveTimerText.text = timeLabel;
+      this.lastTimerLabel = timeLabel;
+      this.waveTimerText.position.set(
+        this.waveBannerText.x + this.waveBannerText.width / 2 + 28,
+        this.waveBannerText.y,
+      );
+    }
   }
 
-  private placeDendroTower(spot: SpotInfoType): void {
+  private resetWaveBanner(): void {
+    if (!this.waveBannerText || !this.waveTimerText) return;
+    this.waveBannerText.text = "WAVE 1";
+    this.waveTimerText.text = "";
+    this.lastBannerLabel = "WAVE 1";
+    this.lastTimerLabel = "";
+  }
+
+  private placeTeslaTower(spot: SpotInfoType): TeslaTower | undefined {
+    if (
+      !this.world ||
+      !this.towerManager ||
+      !this.teslaFrames ||
+      !this.effectsLayer ||
+      !this.starTexture
+    ) {
+      return undefined;
+    }
+
+    const sprite = new AnimatedSprite(this.teslaFrames);
+    sprite.scale.set(0.5);
+
+    const tower = new TeslaTower(sprite, {
+      damage: TESLA_DAMAGE,
+      attackSpeed: TESLA_ATTACK_SPEED,
+      animationSpeed: TESLA_ANIMATION_SPEED,
+      attackRadius: TESLA_ATTACK_RADIUS,
+      chainRadius: TESLA_CHAIN_RADIUS,
+      effectsLayer: this.effectsLayer,
+      spot,
+      type: "Tesla",
+      starTexture: this.starTexture,
+    });
+    this.world.addChild(tower.container);
+    this.towerManager.addTower(tower);
+    return tower;
+  }
+
+  private placeDendroTower(spot: SpotInfoType): DendroTower | undefined {
     if (
       !this.world ||
       !this.towerManager ||
       !this.dendroFrames ||
-      !this.dendroBulletManager
+      !this.dendroBulletManager ||
+      !this.starTexture
     ) {
-      return;
+      return undefined;
     }
 
     const sprite = new AnimatedSprite(this.dendroFrames);
-    sprite.position.set(spot.x, spot.y);
     sprite.scale.set(0.5);
-    this.world.addChild(sprite);
 
-    this.towerManager.addTower(
-      new DendroTower(
-        sprite,
-        {
-          damage: DENDRO_DAMAGE,
-          attackSpeed: DENDRO_ATTACK_SPEED,
-          animationSpeed: DENDRO_ANIMATION_SPEED,
-          spot,
-          type: "Dendro",
-          cost: TOWER_COSTS.Dendro,
-        },
-        this.dendroBulletManager,
-      ),
+    const tower = new DendroTower(
+      sprite,
+      {
+        damage: DENDRO_DAMAGE,
+        attackSpeed: DENDRO_ATTACK_SPEED,
+        animationSpeed: DENDRO_ANIMATION_SPEED,
+        spot,
+        type: "Dendro",
+        starTexture: this.starTexture,
+      },
+      this.dendroBulletManager,
     );
+    this.world.addChild(tower.container);
+    this.towerManager.addTower(tower);
+    return tower;
   }
 
-  private placeFrostTower(spot: SpotInfoType): void {
+  private placeFrostTower(spot: SpotInfoType): FrostTower | undefined {
     if (
       !this.world ||
       !this.towerManager ||
       !this.frostFrames ||
-      !this.frostBulletManager
+      !this.frostBulletManager ||
+      !this.starTexture
     ) {
-      return;
+      return undefined;
     }
 
     const sprite = new AnimatedSprite(this.frostFrames);
-    sprite.position.set(spot.x, spot.y);
     sprite.scale.set(0.5);
-    this.world.addChild(sprite);
 
-    this.towerManager.addTower(
-      new FrostTower(
-        sprite,
-        {
-          damage: FROST_DAMAGE,
-          attackSpeed: FROST_ATTACK_SPEED,
-          animationSpeed: FROST_ANIMATION_SPEED,
-          spot,
-          type: "Frost",
-          cost: TOWER_COSTS.Frost,
-        },
-        this.frostBulletManager,
-      ),
+    const tower = new FrostTower(
+      sprite,
+      {
+        damage: FROST_DAMAGE,
+        attackSpeed: FROST_ATTACK_SPEED,
+        animationSpeed: FROST_ANIMATION_SPEED,
+        spot,
+        type: "Frost",
+        starTexture: this.starTexture,
+      },
+      this.frostBulletManager,
     );
+    this.world.addChild(tower.container);
+    this.towerManager.addTower(tower);
+    return tower;
   }
 
   private handleEnemyRemoved(enemy: Enemy): void {
-    if (enemy.state === "Dead") {
-      this.gold += GOLD_REWARDS[enemy.type];
-    } else if (enemy.state === "ReachedEnd") {
+    if (enemy.state === "ReachedEnd") {
       this.hp = Math.max(0, this.hp - HP_LOSS_PER_ENEMY);
     }
   }

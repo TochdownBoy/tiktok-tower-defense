@@ -1,4 +1,4 @@
-import { Container, type AnimatedSprite, type Texture } from "pixi.js";
+import { Container, type AnimatedSprite } from "pixi.js";
 import type { Enemy } from "./Enemy";
 import { Tower, type TowerOptions } from "./Tower";
 import { LightningEffect } from "../effects/LightningEffect";
@@ -8,7 +8,6 @@ export interface TeslaTowerOptions extends TowerOptions {
   chainRadius?: number;
   chainTargets?: number;
   effectsLayer: Container;
-  levelFrames?: Texture[][];
 }
 
 const DEFAULT_CHAIN_RADIUS = 250;
@@ -20,7 +19,6 @@ export class TeslaTower extends Tower {
   private readonly maxChainTargets: number;
   private readonly effectsLayer: Container;
   private readonly chainBuffer: Enemy[] = [];
-  private readonly levelFrames?: Texture[][];
 
   constructor(sprite: AnimatedSprite, options: TeslaTowerOptions) {
     super(sprite, options);
@@ -30,24 +28,14 @@ export class TeslaTower extends Tower {
     this.chainRadiusSquared = chainRadius * chainRadius;
     this.maxChainTargets = options.chainTargets ?? DEFAULT_CHAIN_TARGETS;
     this.effectsLayer = options.effectsLayer;
-    this.levelFrames = options.levelFrames;
-  }
-
-  override upgrade(): void {
-    super.upgrade();
-    const frames = this.levelFrames?.[this.level - 1];
-    if (frames) {
-      this.sprite.textures = frames;
-      this.sprite.gotoAndPlay(0);
-    }
   }
 
   protected override findPrimaryTarget(
     enemies: Enemy[],
     proposedHp: Map<Enemy, number>,
   ): Enemy | undefined {
-    const tx = this.sprite.position.x;
-    const ty = this.sprite.position.y;
+    const tx = this.position.x;
+    const ty = this.position.y;
 
     for (let i = enemies.length - 1; i >= 0; i--) {
       const enemy = enemies[i];
@@ -78,8 +66,8 @@ export class TeslaTower extends Tower {
       chain.map((e) => Math.round(e.progress)),
     );
 
-    let fromX = this.sprite.position.x;
-    let fromY = this.sprite.position.y;
+    let fromX = this.position.x;
+    let fromY = this.position.y;
     for (const target of chain) {
       this.dealDamage(target, proposedHp);
       this.spawnLightning(fromX, fromY, target.position.x, target.position.y);

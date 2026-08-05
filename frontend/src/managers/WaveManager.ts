@@ -2,12 +2,12 @@ import type { EnemyManager } from "./EnemyManager";
 import type { EnemyType } from "../types/enemy";
 import type { WaveConfig } from "../types/wave";
 
-const DEFAULT_DELAY_BETWEEN_WAVES = 2.5;
+const DEFAULT_WAVE_DURATION_SECONDS = 30;
 
-type WaveState = "idle" | "running" | "between" | "finished";
+type WaveState = "idle" | "running" | "finished";
 
 export interface WaveManagerOptions {
-  delayBetweenWaves?: number;
+  waveDurationSeconds?: number;
   onWaveStart?: (waveNumber: number) => void;
   onVictory?: () => void;
 }
@@ -15,18 +15,17 @@ export interface WaveManagerOptions {
 export class WaveManager {
   private readonly enemyManager: EnemyManager;
   private readonly waves: WaveConfig[];
-  private readonly delayBetweenWaves: number;
+  private readonly waveDurationSeconds: number;
   private readonly onWaveStart?: (waveNumber: number) => void;
   private readonly onVictory?: () => void;
 
   private state: WaveState = "idle";
   private currentWaveIndex = -1;
+  private remainingWaveSeconds = 0;
   private spawnQueue: EnemyType[] = [];
   private spawnCursor = 0;
   private spawnInterval = 0;
   private spawnTimer = 0;
-  private delayTimer = 0;
-  private aliveEnemies = 0;
 
   constructor(
     enemyManager: EnemyManager,
@@ -35,11 +34,10 @@ export class WaveManager {
   ) {
     this.enemyManager = enemyManager;
     this.waves = waves;
-    this.delayBetweenWaves =
-      options.delayBetweenWaves ?? DEFAULT_DELAY_BETWEEN_WAVES;
+    this.waveDurationSeconds =
+      options.waveDurationSeconds ?? DEFAULT_WAVE_DURATION_SECONDS;
     this.onWaveStart = options.onWaveStart;
     this.onVictory = options.onVictory;
-    this.enemyManager.addEnemyRemovedListener(this.handleEnemyRemoved);
   }
 
   startWave(index: number): void {
@@ -54,7 +52,7 @@ export class WaveManager {
     this.spawnCursor = 0;
     this.spawnInterval = wave.spawnInterval / 1000;
     this.spawnTimer = 0;
-    this.aliveEnemies = 0;
+    this.remainingWaveSeconds = this.waveDurationSeconds;
 
     this.onWaveStart?.(index + 1);
   }
@@ -62,26 +60,27 @@ export class WaveManager {
   nextWave(): void {
     if (this.state === "idle") {
       this.startWave(0);
-    } else if (this.state === "between") {
-      this.startWave(this.currentWaveIndex + 1);
+    } else if (this.state === "running") {
+      this.completeCurrentWave();
     }
   }
 
   update(delta: number): void {
-    switch (this.state) {
-      case "running":
-        this.spawnFromQueue(delta);
-        this.checkCompletion();
-        break;
-      case "between":
-        this.delayTimer -= delta;
-        if (this.delayTimer <= 0) {
-          this.startWave(this.currentWaveIndex + 1);
-        }
-        break;
-      default:
-        break;
+    if (this.state !== "running") return;
+
+    this.spawnFromQueue(delta);
+    this.remainingWaveSeconds -= delta;
+    if (this.remainingWaveSeconds <= 0) {
+      this.completeCurrentWave();
     }
+  }
+
+  reset(): void {
+    this.state = "idle";
+    this.currentWaveIndex = -1;
+    this.spawnQueue = [];
+    this.spawnCursor = 0;
+    this.remainingWaveSeconds = this.waveDurationSeconds;
   }
 
   get currentWave(): number {
@@ -92,24 +91,23 @@ export class WaveManager {
     return this.state === "running";
   }
 
-  get isWaveFinished(): boolean {
-    return this.state === "between" || this.state === "finished";
-  }
-
   get isVictory(): boolean {
     return this.state === "finished";
   }
 
-  get remainingToSpawn(): number {
-    return this.spawnQueue.length - this.spawnCursor;
+  get remainingSeconds(): number {
+    return Math.max(0, Math.ceil(this.remainingWaveSeconds));
   }
 
-  get aliveEnemiesInWave(): number {
-    return this.aliveEnemies;
-  }
+  private completeCurrentWave(): void {
+    if (this.currentWaveIndex >= this.waves.length - 1) {
+      this.state = "finished";
+      this.onVictory?.();
+      return;
+    }
 
-  get totalEnemies(): number {
-    return this.spawnQueue.length;
+    this.state = "idle";
+    this.startWave(this.currentWaveIndex + 1);
   }
 
   private spawnFromQueue(delta: number): void {
@@ -119,27 +117,7 @@ export class WaveManager {
     while (this.spawnTimer <= 0 && this.spawnCursor < this.spawnQueue.length) {
       this.enemyManager.spawnEnemy(this.spawnQueue[this.spawnCursor]);
       this.spawnCursor++;
-      this.aliveEnemies++;
       this.spawnTimer += this.spawnInterval;
     }
   }
-
-  private checkCompletion(): void {
-    if (this.spawnCursor < this.spawnQueue.length) return;
-    if (this.aliveEnemies > 0) return;
-
-    if (this.currentWaveIndex >= this.waves.length - 1) {
-      this.state = "finished";
-      this.onVictory?.();
-    } else {
-      this.state = "between";
-      this.delayTimer = this.delayBetweenWaves;
-    }
-  }
-
-  private handleEnemyRemoved = (): void => {
-    if (this.aliveEnemies > 0) {
-      this.aliveEnemies--;
-    }
-  };
 }

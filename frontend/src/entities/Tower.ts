@@ -1,8 +1,10 @@
-import { AnimatedSprite } from "pixi.js";
+import { AnimatedSprite, Container, Text, type Texture } from "pixi.js";
 import type { Enemy } from "./Enemy";
 import type { BulletManager } from "../managers/BulletManager";
 import type { SpotInfoType } from "../types/spot";
 import type { TowerType } from "../types/tower";
+import type { TurretStarLevel } from "../types/game";
+import { StarIndicator } from "../effects/StarIndicator";
 
 export interface TowerOptions {
   damage: number;
@@ -11,29 +13,33 @@ export interface TowerOptions {
   anchor?: { x: number; y: number };
   spot: SpotInfoType;
   type: TowerType;
-  cost: number;
+  starTexture: Texture;
 }
 
-export const MAX_TOWER_LEVEL = 3;
+export const MAX_STAR_LEVEL: TurretStarLevel = 6;
 
 const DEFAULT_ANCHOR = { x: 0.5, y: 0.5 };
 const DEFAULT_ANIMATION_SPEED = 8;
 
-const DAMAGE_UPGRADE_MULTIPLIER = 1.5;
-const ATTACK_SPEED_UPGRADE_MULTIPLIER = 1.25;
+const DAMAGE_UPGRADE_MULTIPLIER = 1.2;
+
+const STARS_OFFSET_Y = -95;
+const NICKNAME_OFFSET_Y = -140;
 
 export class Tower {
+  public readonly container = new Container();
   public readonly sprite: AnimatedSprite;
   public readonly spot: SpotInfoType;
   public readonly type: TowerType;
-  public readonly cost: number;
-  public investedGold: number;
-  public level = 1;
+  public starLevel: TurretStarLevel = 1;
+  public username = "";
   protected cooldownTimer = 0;
 
   protected damage: number;
   protected attackSpeed: number;
   private readonly bulletManager?: BulletManager;
+  private readonly starIndicator: StarIndicator;
+  private readonly nicknameText: Text;
 
   constructor(
     sprite: AnimatedSprite,
@@ -43,8 +49,6 @@ export class Tower {
     this.sprite = sprite;
     this.spot = options.spot;
     this.type = options.type;
-    this.cost = options.cost;
-    this.investedGold = options.cost;
     this.damage = options.damage;
     this.attackSpeed = options.attackSpeed;
     this.bulletManager = bulletManager;
@@ -55,13 +59,58 @@ export class Tower {
       options.animationSpeed ?? DEFAULT_ANIMATION_SPEED;
     this.sprite.loop = true;
     this.sprite.play();
+
+    this.container.position.set(options.spot.x, options.spot.y);
+    this.container.addChild(sprite);
+
+    this.starIndicator = new StarIndicator(
+      options.starTexture,
+      this.sprite.width,
+    );
+    this.starIndicator.position.set(0, STARS_OFFSET_Y);
+    this.container.addChild(this.starIndicator);
+    this.starIndicator.setLevel(this.starLevel);
+
+    this.nicknameText = new Text({
+      text: "",
+      style: {
+        fontFamily: "ADLaM Display",
+        fontSize: 40,
+        fontWeight: "700",
+        fill: 0xffffff,
+        stroke: { color: 0x000000, width: 4 },
+      },
+    });
+    this.nicknameText.anchor.set(0.5, 0.5);
+    this.nicknameText.position.set(0, NICKNAME_OFFSET_Y);
+    this.nicknameText.visible = false;
+    this.container.addChild(this.nicknameText);
   }
 
-  upgrade(): void {
-    if (this.level >= MAX_TOWER_LEVEL) return;
-    this.level++;
+  get position(): { x: number; y: number } {
+    return this.container.position;
+  }
+
+  setStarLevel(level: TurretStarLevel): void {
+    this.starLevel = level;
+    this.starIndicator.setLevel(level);
+  }
+
+  upgradeStarLevel(): boolean {
+    if (this.starLevel >= MAX_STAR_LEVEL) return false;
+    this.setStarLevel((this.starLevel + 1) as TurretStarLevel);
     this.damage = Math.round(this.damage * DAMAGE_UPGRADE_MULTIPLIER);
-    this.attackSpeed *= ATTACK_SPEED_UPGRADE_MULTIPLIER;
+    return true;
+  }
+
+  setNickname(username: string): void {
+    this.username = username;
+    this.nicknameText.text = username;
+    this.nicknameText.visible = username.length > 0;
+  }
+
+  destroy(): void {
+    this.container.destroy({ children: true });
   }
 
   update(
@@ -107,11 +156,7 @@ export class Tower {
     proposedHp: Map<Enemy, number>,
   ): void {
     if (this.bulletManager) {
-      this.bulletManager.spawnBullet(
-        this.sprite.position.x,
-        this.sprite.position.y,
-        target,
-      );
+      this.bulletManager.spawnBullet(this.position.x, this.position.y, target);
     } else {
       this.dealDamage(target, proposedHp);
     }

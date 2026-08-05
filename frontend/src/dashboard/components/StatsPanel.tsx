@@ -1,4 +1,5 @@
 import type { GameState } from "../../game/GameEngine";
+import { formatTimer } from "../../utils/formatTime";
 
 interface StatsPanelProps {
   state: GameState | null;
@@ -11,11 +12,13 @@ export function StatsPanel({ state }: StatsPanelProps) {
       <dl className="stats">
         <div className="stat">
           <dt>Wave</dt>
-          <dd>{state?.wave ?? 0}</dd>
+          <dd>
+            {state?.currentWave ?? 0} / {state?.totalWaves ?? 10}
+          </dd>
         </div>
         <div className="stat">
-          <dt>Gold</dt>
-          <dd>{state?.gold ?? 0}</dd>
+          <dt>Wave Time</dt>
+          <dd>{state ? formatTimer(state.remainingWaveSeconds) : "00:00"}</dd>
         </div>
         <div className="stat">
           <dt>HP</dt>
@@ -40,7 +43,13 @@ export function StatsPanel({ state }: StatsPanelProps) {
         <div className="stat">
           <dt>Status</dt>
           <dd>
-            {state?.isVictory ? "Victory" : state?.isPaused ? "Paused" : "Live"}
+            {state?.isVictory
+              ? "Victory"
+              : state?.isPaused
+                ? "Paused"
+                : state?.isActive
+                  ? "Live"
+                  : "Idle"}
           </dd>
         </div>
       </dl>
