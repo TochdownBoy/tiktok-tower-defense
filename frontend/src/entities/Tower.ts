@@ -22,6 +22,8 @@ const DEFAULT_ANCHOR = { x: 0.5, y: 0.5 };
 const DEFAULT_ANIMATION_SPEED = 8;
 
 const DAMAGE_UPGRADE_MULTIPLIER = 1.2;
+const ATTACK_SPEED_UPGRADE_MULTIPLIER = 1.1;
+const ANIMATION_SPEED_UPGRADE_MULTIPLIER = 1.1;
 
 const STARS_OFFSET_Y = -95;
 const NICKNAME_OFFSET_Y = -140;
@@ -37,6 +39,7 @@ export class Tower {
 
   protected damage: number;
   protected attackSpeed: number;
+  private attacking = false;
   private readonly bulletManager?: BulletManager;
   private readonly starIndicator: StarIndicator;
   private readonly nicknameText: Text;
@@ -91,6 +94,10 @@ export class Tower {
     return this.container.position;
   }
 
+  get isAttacking(): boolean {
+    return this.attacking;
+  }
+
   setStarLevel(level: TurretStarLevel): void {
     this.starLevel = level;
     this.starIndicator.setLevel(level);
@@ -100,8 +107,13 @@ export class Tower {
     if (this.starLevel >= MAX_STAR_LEVEL) return false;
     this.setStarLevel((this.starLevel + 1) as TurretStarLevel);
     this.damage = Math.round(this.damage * DAMAGE_UPGRADE_MULTIPLIER);
+    this.attackSpeed *= ATTACK_SPEED_UPGRADE_MULTIPLIER;
+    this.sprite.animationSpeed *= ANIMATION_SPEED_UPGRADE_MULTIPLIER;
+    this.onStarLevelUp();
     return true;
   }
+
+  protected onStarLevelUp(): void {}
 
   setNickname(username: string): void {
     this.username = username;
@@ -121,8 +133,13 @@ export class Tower {
     this.cooldownTimer -= deltaTime;
 
     const target = this.findPrimaryTarget(enemies, proposedHp);
+    this.attacking = target !== undefined;
     if (!target) {
-      this.sprite.stop();
+      if (this.sprite.currentFrame !== 0) {
+        this.sprite.gotoAndStop(0);
+      } else {
+        this.sprite.stop();
+      }
       return;
     }
 

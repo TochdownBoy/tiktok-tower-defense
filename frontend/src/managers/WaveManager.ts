@@ -3,6 +3,7 @@ import type { EnemyType } from "../types/enemy";
 import type { WaveConfig } from "../types/wave";
 
 const DEFAULT_WAVE_DURATION_SECONDS = 30;
+const ENEMY_HP_WAVE_MULTIPLIER = 1.3;
 
 type WaveState = "idle" | "running" | "finished";
 
@@ -115,7 +116,11 @@ export class WaveManager {
 
     this.spawnTimer -= delta;
     while (this.spawnTimer <= 0 && this.spawnCursor < this.spawnQueue.length) {
-      this.enemyManager.spawnEnemy(this.spawnQueue[this.spawnCursor]);
+      const hpMultiplier = ENEMY_HP_WAVE_MULTIPLIER ** this.currentWaveIndex;
+      this.enemyManager.spawnEnemy(
+        this.spawnQueue[this.spawnCursor],
+        hpMultiplier,
+      );
       this.spawnCursor++;
       this.spawnTimer += this.spawnInterval;
     }

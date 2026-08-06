@@ -14,7 +14,10 @@ export type BulletFactory = new (
   spawnY: number,
   target: Enemy,
   speed: number,
-  scale?: number,
+  scale: number,
+  damage: number,
+  onHit?: () => void,
+  applyHitEffect?: (enemy: Enemy) => void,
 ) => BulletLike;
 
 export class BulletManager {
@@ -26,6 +29,9 @@ export class BulletManager {
     private readonly speed = 600,
     private readonly bulletFactory: BulletFactory = FrostBullet,
     private readonly scale = 0.15,
+    private readonly damage = 0,
+    private readonly onHit?: () => void,
+    private readonly applyHitEffect?: (enemy: Enemy) => void,
   ) {}
 
   spawnBullet(x: number, y: number, target: Enemy): void {
@@ -36,6 +42,9 @@ export class BulletManager {
       target,
       this.speed,
       this.scale,
+      this.damage,
+      this.onHit,
+      this.applyHitEffect,
     );
     this.bullets.push(bullet);
     this.container.addChild(bullet.sprite);

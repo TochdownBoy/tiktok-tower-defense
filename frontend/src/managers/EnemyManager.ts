@@ -20,11 +20,16 @@ export class EnemyManager {
     this.removedListeners.push(listener);
   }
 
-  spawnEnemy(type: EnemyType): Enemy {
+  spawnEnemy(type: EnemyType, hpMultiplier = 1): Enemy {
+    const config = ENEMY_CONFIGS[type];
+    const scaledConfig =
+      hpMultiplier === 1
+        ? config
+        : { ...config, hp: Math.round(config.hp * hpMultiplier) };
     const enemy = new Enemy(
       this.waypoints,
       this.textures[type],
-      ENEMY_CONFIGS[type],
+      scaledConfig,
       type,
     );
     this.enemies.push(enemy);

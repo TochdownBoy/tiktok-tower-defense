@@ -43,13 +43,15 @@ export function StatsPanel({ state }: StatsPanelProps) {
         <div className="stat">
           <dt>Status</dt>
           <dd>
-            {state?.isVictory
-              ? "Victory"
-              : state?.isPaused
-                ? "Paused"
-                : state?.isActive
-                  ? "Live"
-                  : "Idle"}
+            {state?.isDefeat
+              ? "Defeat"
+              : state?.isVictory
+                ? "Victory"
+                : state?.isPaused
+                  ? "Paused"
+                  : state?.isActive
+                    ? "Live"
+                    : "Idle"}
           </dd>
         </div>
       </dl>

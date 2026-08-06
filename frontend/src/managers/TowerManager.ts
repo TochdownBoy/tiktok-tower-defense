@@ -28,6 +28,12 @@ export class TowerManager {
     return this.towers.find((tower) => tower.type === type);
   }
 
+  hasAttackingTowers(type: Tower["type"]): boolean {
+    return this.towers.some(
+      (tower) => tower.type === type && tower.isAttacking,
+    );
+  }
+
   getTowerAtSpot(order: number): Tower | undefined {
     return this.towers.find((tower) => tower.spot.order === order);
   }

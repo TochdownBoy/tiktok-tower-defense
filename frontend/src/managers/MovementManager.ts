@@ -5,6 +5,8 @@ export class MovementManager {
   public currentWaypointIndex = 0;
   public reachedEnd = false;
   public distanceTravelled = 0;
+  public speedMultiplier = 1;
+  public isRooted = false;
 
   constructor(
     private readonly waypoints: Waypoint[],
@@ -17,6 +19,10 @@ export class MovementManager {
   }
 
   get velocity(): { x: number; y: number } {
+    if (this.isRooted) {
+      return { x: 0, y: 0 };
+    }
+
     const target = this.waypoints[this.currentWaypointIndex];
     if (!target) {
       return { x: 0, y: 0 };
@@ -29,14 +35,16 @@ export class MovementManager {
       return { x: 0, y: 0 };
     }
 
+    const step = this.speed * this.speedMultiplier;
     return {
-      x: (dx / distance) * this.speed,
-      y: (dy / distance) * this.speed,
+      x: (dx / distance) * step,
+      y: (dy / distance) * step,
     };
   }
 
   getPositionAfterTime(time: number): { x: number; y: number } {
-    const distance = this.distanceTravelled + this.speed * time;
+    const distance =
+      this.distanceTravelled + this.speed * this.speedMultiplier * time;
     return this.getPositionAtDistance(distance);
   }
 
@@ -69,6 +77,8 @@ export class MovementManager {
   }
 
   update(deltaTime: number): void {
+    if (this.isRooted) return;
+
     const target = this.waypoints[this.currentWaypointIndex];
     if (!target) {
       this.reachedEnd = true;
@@ -78,7 +88,7 @@ export class MovementManager {
     const dx = target.x - this.sprite.x;
     const dy = target.y - this.sprite.y;
     const distance = Math.hypot(dx, dy);
-    const step = this.speed * deltaTime;
+    const step = this.speed * this.speedMultiplier * deltaTime;
 
     this.distanceTravelled += step;
 

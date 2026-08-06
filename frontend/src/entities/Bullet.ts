@@ -11,6 +11,10 @@ export class Bullet {
 
   private readonly target: Enemy;
   private readonly speed: number;
+  private readonly damage: number;
+  private readonly onHit?: () => void;
+  private readonly applyHitEffect?: (enemy: Enemy) => void;
+  private arrived = false;
 
   constructor(
     texture: Texture,
@@ -19,10 +23,16 @@ export class Bullet {
     target: Enemy,
     speed: number,
     scale = 0.15,
+    damage: number,
+    onHit?: () => void,
+    applyHitEffect?: (enemy: Enemy) => void,
   ) {
     this.sprite = this.createSprite(texture, spawnX, spawnY, scale);
     this.target = target;
     this.speed = speed;
+    this.damage = damage;
+    this.onHit = onHit;
+    this.applyHitEffect = applyHitEffect;
 
     const destination = this.predictDestination(spawnX, spawnY);
     this.sprite.rotation = this.calculateRotation(
@@ -62,6 +72,7 @@ export class Bullet {
 
     if (distance <= step) {
       this.sprite.position.set(destination.x, destination.y);
+      this.arrived = true;
       return;
     }
 
@@ -78,6 +89,11 @@ export class Bullet {
     const dx = this.target.position.x - this.sprite.x;
     const dy = this.target.position.y - this.sprite.y;
     if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) {
+      this.target.takeDamage(this.damage);
+      this.applyHitEffect?.(this.target);
+      this.onHit?.();
+      this.isDone = true;
+    } else if (this.arrived) {
       this.isDone = true;
     }
   }

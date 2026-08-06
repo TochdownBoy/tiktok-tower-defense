@@ -27,6 +27,8 @@ export class Enemy {
   private readonly config: EnemyConfig;
   private readonly movement: MovementManager;
   private readonly hpText: Text;
+  private slowRemaining = 0;
+  private rootRemaining = 0;
 
   constructor(
     waypoints: Waypoint[],
@@ -98,8 +100,37 @@ export class Enemy {
     }
   }
 
+  applySlowdown(factor: number, duration: number): void {
+    this.slowRemaining = Math.max(this.slowRemaining, duration);
+    this.movement.speedMultiplier = Math.min(
+      this.movement.speedMultiplier,
+      factor,
+    );
+  }
+
+  applyRoot(duration: number): void {
+    this.rootRemaining = Math.max(this.rootRemaining, duration);
+    this.movement.isRooted = true;
+  }
+
   update(deltaTime: number): void {
     if (this.state !== "Alive") return;
+
+    if (this.slowRemaining > 0) {
+      this.slowRemaining -= deltaTime;
+      if (this.slowRemaining <= 0) {
+        this.slowRemaining = 0;
+        this.movement.speedMultiplier = 1;
+      }
+    }
+
+    if (this.rootRemaining > 0) {
+      this.rootRemaining -= deltaTime;
+      if (this.rootRemaining <= 0) {
+        this.rootRemaining = 0;
+        this.movement.isRooted = false;
+      }
+    }
 
     this.movement.update(deltaTime);
     this.syncHpText();

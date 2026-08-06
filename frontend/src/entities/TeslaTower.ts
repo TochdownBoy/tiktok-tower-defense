@@ -2,6 +2,7 @@ import { Container, type AnimatedSprite } from "pixi.js";
 import type { Enemy } from "./Enemy";
 import { Tower, type TowerOptions } from "./Tower";
 import { LightningEffect } from "../effects/LightningEffect";
+import type { TurretStarLevel } from "../types/game";
 
 export interface TeslaTowerOptions extends TowerOptions {
   attackRadius: number;
@@ -11,12 +12,13 @@ export interface TeslaTowerOptions extends TowerOptions {
 }
 
 const DEFAULT_CHAIN_RADIUS = 250;
-const DEFAULT_CHAIN_TARGETS = 4;
+const DEFAULT_CHAIN_TARGETS = 1;
 
 export class TeslaTower extends Tower {
   private readonly attackRadiusSquared: number;
   private readonly chainRadiusSquared: number;
-  private readonly maxChainTargets: number;
+  private readonly baseChainTargets: number;
+  private maxChainTargets: number;
   private readonly effectsLayer: Container;
   private readonly chainBuffer: Enemy[] = [];
 
@@ -26,8 +28,17 @@ export class TeslaTower extends Tower {
     this.attackRadiusSquared = options.attackRadius * options.attackRadius;
     const chainRadius = options.chainRadius ?? DEFAULT_CHAIN_RADIUS;
     this.chainRadiusSquared = chainRadius * chainRadius;
-    this.maxChainTargets = options.chainTargets ?? DEFAULT_CHAIN_TARGETS;
+    this.baseChainTargets = options.chainTargets ?? DEFAULT_CHAIN_TARGETS;
+    this.maxChainTargets = this.computeChainTargets(this.starLevel);
     this.effectsLayer = options.effectsLayer;
+  }
+
+  protected override onStarLevelUp(): void {
+    this.maxChainTargets = this.computeChainTargets(this.starLevel);
+  }
+
+  private computeChainTargets(level: TurretStarLevel): number {
+    return this.baseChainTargets + Math.floor((level - 1) / 2);
   }
 
   protected override findPrimaryTarget(
@@ -57,14 +68,6 @@ export class TeslaTower extends Tower {
     proposedHp: Map<Enemy, number>,
   ): void {
     const chain = this.findChainTargets(primary, enemies, proposedHp);
-    console.log(
-      "[debug] attack",
-      "enemies in array:",
-      enemies.length,
-      "chain size:",
-      chain.length,
-      chain.map((e) => Math.round(e.progress)),
-    );
 
     let fromX = this.position.x;
     let fromY = this.position.y;
@@ -86,7 +89,7 @@ export class TeslaTower extends Tower {
     chain.push(primary);
 
     let prev = primary;
-    for (let i = 0; i < this.maxChainTargets; i++) {
+    for (let i = 0; i < this.maxChainTargets - 1; i++) {
       const next = this.findChainTarget(prev, enemies, proposedHp);
       if (!next) break;
       chain.push(next);
