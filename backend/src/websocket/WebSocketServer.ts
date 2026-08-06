@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { WebSocket, WebSocketServer as WsServer, type RawData } from "ws";
+import type { ServerToClientEvent } from "../gift/types.js";
 
 export interface Packet {
   event: string;
@@ -62,7 +63,14 @@ export class WebSocketServer extends EventEmitter {
   }
 
   broadcast(packet: Packet): void {
-    const message = JSON.stringify(packet);
+    this.broadcastRaw(JSON.stringify(packet));
+  }
+
+  broadcastEvent(event: ServerToClientEvent): void {
+    this.broadcastRaw(JSON.stringify(event));
+  }
+
+  private broadcastRaw(message: string): void {
     for (const client of this.clients) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(message);

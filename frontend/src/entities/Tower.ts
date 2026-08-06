@@ -3,7 +3,7 @@ import type { Enemy } from "./Enemy";
 import type { BulletManager } from "../managers/BulletManager";
 import type { SpotInfoType } from "../types/spot";
 import type { TowerType } from "../types/tower";
-import type { TurretStarLevel } from "../types/game";
+import type { TowerOwnership, TurretStarLevel } from "../types/game";
 import { StarIndicator } from "../effects/StarIndicator";
 
 export interface TowerOptions {
@@ -35,6 +35,8 @@ export class Tower {
   public readonly type: TowerType;
   public starLevel: TurretStarLevel = 1;
   public username = "";
+  public spawnOwner = "";
+  public upgradeOwner = "";
   protected cooldownTimer = 0;
 
   protected damage: number;
@@ -119,6 +121,23 @@ export class Tower {
     this.username = username;
     this.nicknameText.text = username;
     this.nicknameText.visible = username.length > 0;
+  }
+
+  setOwnership(ownership: TowerOwnership): void {
+    if (this.spawnOwner === "" && ownership.spawnOwner) {
+      this.spawnOwner = ownership.spawnOwner;
+    }
+    if (ownership.upgradeOwner) {
+      this.upgradeOwner = ownership.upgradeOwner;
+    }
+    this.setNickname(this.upgradeOwner || this.spawnOwner);
+  }
+
+  applyUpgradeOwner(upgradeOwner: string): void {
+    if (upgradeOwner) {
+      this.upgradeOwner = upgradeOwner;
+    }
+    this.setNickname(this.upgradeOwner || this.spawnOwner);
   }
 
   destroy(): void {

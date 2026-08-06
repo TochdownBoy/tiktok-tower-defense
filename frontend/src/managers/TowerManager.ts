@@ -28,6 +28,19 @@ export class TowerManager {
     return this.towers.find((tower) => tower.type === type);
   }
 
+  getFirstTowerBySpawnOwner(
+    username: string,
+    type: Tower["type"],
+  ): Tower | undefined {
+    return this.towers.find(
+      (tower) => tower.type === type && tower.spawnOwner === username,
+    );
+  }
+
+  getTowersByType(type: Tower["type"]): Tower[] {
+    return this.towers.filter((tower) => tower.type === type);
+  }
+
   hasAttackingTowers(type: Tower["type"]): boolean {
     return this.towers.some(
       (tower) => tower.type === type && tower.isAttacking,

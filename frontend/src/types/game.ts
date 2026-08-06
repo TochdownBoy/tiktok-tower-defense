@@ -23,6 +23,7 @@ export type GameAction =
   | "turret_spawned"
   | "turret_upgraded"
   | "monster_spawned"
+  | "enemies_cleared"
   | "skipped";
 
 export type GameActionResultReason =
@@ -58,18 +59,58 @@ export type TurretActionResult = GameActionResult<TurretActionResultData>;
 export type TurretGiftResult = TurretActionResult;
 export type MonsterActionResult = GameActionResult<MonsterActionResultData>;
 
+export interface TowerOwnership {
+  spawnOwner: string;
+  upgradeOwner: string;
+  spawnAt?: number;
+  lastUpgradeAt?: number;
+  totalUpgrades?: number;
+}
+
+export type UpgradeOwnership = Pick<
+  TowerOwnership,
+  "upgradeOwner" | "lastUpgradeAt"
+>;
+
+export interface SpawnTowerPayload {
+  username: string;
+  towerType: string;
+  ownership: TowerOwnership;
+}
+
+export interface UpgradeTowerPayload {
+  username: string;
+  towerType: string;
+  ownership: UpgradeOwnership;
+}
+
+export interface UpgradeRandomTowerPayload {
+  towerType: string;
+  ownership: UpgradeOwnership;
+}
+
+export interface SpawnEnemyPayload {
+  enemyType: string;
+  count: number;
+}
+
 export type ServerToGameEvent =
   | {
-      type: "turret_gift";
-      payload: TurretGiftInput;
+      type: "spawn_tower";
+      payload: SpawnTowerPayload;
     }
   | {
-      type: "monster_gift";
-      payload: MonsterSpawnInput;
+      type: "upgrade_tower";
+      payload: UpgradeTowerPayload;
     }
   | {
-      type: "start_game";
+      type: "upgrade_random_tower";
+      payload: UpgradeRandomTowerPayload;
     }
   | {
-      type: "finish_game";
+      type: "spawn_enemy";
+      payload: SpawnEnemyPayload;
+    }
+  | {
+      type: "clear_enemies";
     };

@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { GameEngine } from "./GameEngine";
 import { useGame } from "./GameContext";
+import { GameSocketClient } from "../integration/GameSocketClient";
+import { getWsUrl } from "../integration/getWsUrl";
 
 export function Game() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -11,6 +13,7 @@ export function Game() {
     if (!container) return;
 
     const engine = new GameEngine();
+    let socket: GameSocketClient | null = null;
     let active = true;
 
     void (async () => {
@@ -20,6 +23,8 @@ export function Game() {
         return;
       }
       store.attach(engine);
+      socket = new GameSocketClient(getWsUrl(), engine);
+      socket.connect();
       if (import.meta.env.DEV) {
         window.gameApi = engine;
       }
@@ -28,6 +33,7 @@ export function Game() {
     return () => {
       active = false;
       store.detach();
+      socket?.destroy();
       engine.destroy();
       if (import.meta.env.DEV && window.gameApi === engine) {
         delete window.gameApi;

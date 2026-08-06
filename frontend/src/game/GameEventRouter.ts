@@ -1,17 +1,22 @@
 import type {
   GameActionResult,
   MonsterActionResult,
-  MonsterSpawnInput,
   ServerToGameEvent,
-  TurretGiftInput,
-  TurretGiftResult,
+  SpawnEnemyPayload,
+  SpawnTowerPayload,
+  TurretActionResult,
+  UpgradeRandomTowerPayload,
+  UpgradeTowerPayload,
 } from "../types/game";
 
 export interface GameEventTarget {
-  startGame(): GameActionResult;
-  finishGame(): GameActionResult;
-  handleTurretGift(input: TurretGiftInput): TurretGiftResult;
-  spawnMonster(input: MonsterSpawnInput): MonsterActionResult;
+  applySpawnTower(payload: SpawnTowerPayload): TurretActionResult;
+  applyUpgradeTower(payload: UpgradeTowerPayload): TurretActionResult;
+  applyUpgradeRandomTower(
+    payload: UpgradeRandomTowerPayload,
+  ): TurretActionResult;
+  applySpawnEnemy(payload: SpawnEnemyPayload): MonsterActionResult;
+  applyClearEnemies(): GameActionResult;
 }
 
 export function handleGameEvent(
@@ -19,13 +24,15 @@ export function handleGameEvent(
   event: ServerToGameEvent,
 ): GameActionResult<unknown> {
   switch (event.type) {
-    case "start_game":
-      return target.startGame();
-    case "finish_game":
-      return target.finishGame();
-    case "turret_gift":
-      return target.handleTurretGift(event.payload);
-    case "monster_gift":
-      return target.spawnMonster(event.payload);
+    case "spawn_tower":
+      return target.applySpawnTower(event.payload);
+    case "upgrade_tower":
+      return target.applyUpgradeTower(event.payload);
+    case "upgrade_random_tower":
+      return target.applyUpgradeRandomTower(event.payload);
+    case "spawn_enemy":
+      return target.applySpawnEnemy(event.payload);
+    case "clear_enemies":
+      return target.applyClearEnemies();
   }
 }

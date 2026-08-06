@@ -32,10 +32,15 @@ import type {
   GameActionResult,
   MonsterActionResult,
   MonsterSpawnInput,
+  SpawnEnemyPayload,
+  SpawnTowerPayload,
+  TowerOwnership,
   TurretActionResult,
   TurretGiftInput,
   TurretGiftResult,
   TurretSpawnInput,
+  UpgradeRandomTowerPayload,
+  UpgradeTowerPayload,
 } from "../types/game";
 import { formatTimer } from "../utils/formatTime";
 
@@ -457,7 +462,10 @@ export class GameEngine {
     return this.upgradeFirstTurretByType({ username, turretType: type });
   }
 
-  spawnTurret(input: TurretSpawnInput): TurretActionResult {
+  spawnTurret(
+    input: TurretSpawnInput,
+    ownership?: TowerOwnership,
+  ): TurretActionResult {
     const username = input?.username?.trim();
     const turretType = input?.turretType;
     if (!username || typeof turretType !== "string") {
@@ -485,6 +493,9 @@ export class GameEngine {
     const tower = this.createTurret(type, spot, username);
     if (!tower) {
       return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (ownership) {
+      tower.setOwnership(ownership);
     }
 
     this.emitState();
@@ -532,7 +543,7 @@ export class GameEngine {
     }
 
     tower.upgradeStarLevel();
-    tower.setNickname(username);
+    tower.applyUpgradeOwner(username);
     this.emitState();
     return {
       success: true,
@@ -570,6 +581,145 @@ export class GameEngine {
     this.enemyManager.spawnEnemy(type);
     this.emitState();
     return { success: true, action: "monster_spawned", data: { type } };
+  }
+
+  applySpawnTower(payload: SpawnTowerPayload): TurretActionResult {
+    const username = payload.username?.trim();
+    if (!username || typeof payload.towerType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    return this.spawnTurret(
+      { username, turretType: payload.towerType },
+      payload.ownership,
+    );
+  }
+
+  applyUpgradeTower(payload: UpgradeTowerPayload): TurretActionResult {
+    const username = payload.username?.trim();
+    if (!username || typeof payload.towerType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveTowerType(payload.towerType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "turret_type_not_found",
+      };
+    }
+
+    const tower = this.towerManager?.getFirstTowerBySpawnOwner(username, type);
+    if (!tower) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "matching_turret_not_found",
+      };
+    }
+    if (tower.starLevel >= MAX_STAR_LEVEL) {
+      return { success: false, action: "skipped", reason: "turret_max_level" };
+    }
+
+    tower.upgradeStarLevel();
+    tower.applyUpgradeOwner(payload.ownership?.upgradeOwner || username);
+    this.emitState();
+    return {
+      success: true,
+      action: "turret_upgraded",
+      data: {
+        type: tower.type,
+        spotOrder: tower.spot.order,
+        spot: tower.spot,
+        level: tower.starLevel,
+      },
+    };
+  }
+
+  applyUpgradeRandomTower(
+    payload: UpgradeRandomTowerPayload,
+  ): TurretActionResult {
+    if (typeof payload.towerType !== "string") {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveTowerType(payload.towerType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "turret_type_not_found",
+      };
+    }
+
+    const towers = this.towerManager?.getTowersByType(type) ?? [];
+    const tower = towers[Math.floor(Math.random() * towers.length)];
+    if (!tower) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "matching_turret_not_found",
+      };
+    }
+    if (tower.starLevel >= MAX_STAR_LEVEL) {
+      return { success: false, action: "skipped", reason: "turret_max_level" };
+    }
+
+    tower.upgradeStarLevel();
+    tower.applyUpgradeOwner(payload.ownership?.upgradeOwner ?? "");
+    this.emitState();
+    return {
+      success: true,
+      action: "turret_upgraded",
+      data: {
+        type: tower.type,
+        spotOrder: tower.spot.order,
+        spot: tower.spot,
+        level: tower.starLevel,
+      },
+    };
+  }
+
+  applySpawnEnemy(payload: SpawnEnemyPayload): MonsterActionResult {
+    if (
+      typeof payload.enemyType !== "string" ||
+      typeof payload.count !== "number"
+    ) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+    if (!this.isActive) {
+      return { success: false, action: "skipped", reason: "game_not_active" };
+    }
+
+    const type = resolveEnemyType(payload.enemyType);
+    if (!type) {
+      return {
+        success: false,
+        action: "skipped",
+        reason: "monster_type_not_found",
+      };
+    }
+    if (!this.enemyManager) {
+      return { success: false, action: "skipped", reason: "invalid_input" };
+    }
+
+    const count = Math.max(0, Math.floor(payload.count));
+    for (let i = 0; i < count; i++) {
+      this.enemyManager.spawnEnemy(type);
+    }
+    this.emitState();
+    return { success: true, action: "monster_spawned", data: { type } };
+  }
+
+  applyClearEnemies(): GameActionResult {
+    this.clearAllMonsters();
+    return { success: true, action: "enemies_cleared" };
   }
 
   clearAllTurrets(): void {
@@ -758,7 +908,7 @@ export class GameEngine {
       tower = this.placeFrostTower(spot);
     }
     if (tower && username) {
-      tower.setNickname(username);
+      tower.setOwnership({ spawnOwner: username, upgradeOwner: username });
     }
     return tower;
   }
