@@ -1,10 +1,11 @@
 import type { GameEngine, GameState } from "../game/GameEngine";
 import { handleGameEvent } from "../game/GameEventRouter";
-import type { ServerToGameEvent } from "../types/game";
-
-interface ControlPacket {
-  event: string;
-}
+import { handleGameCommand } from "../game/GameCommandRouter";
+import {
+  isGameCommandPacket,
+  isServerToClientMessage,
+  isServerToGameEvent,
+} from "./guards";
 
 const RECONNECT_DELAY_MS = 3000;
 
@@ -59,12 +60,14 @@ export class GameSocketClient {
   }
 
   private handleOpen(): void {
-    console.log(`[ws] connected to ${this.url}`);
+    console.log(`[ws] game connected to ${this.url}`);
     this.reconnectTimer = null;
+    this.send({ type: "register", role: "game" });
     this.wasActive = this.engine.getState().isActive;
     if (this.wasActive) {
-      this.sendControl({ event: "start_game" });
+      this.send({ type: "start_game" });
     }
+    this.send({ type: "game_state", payload: this.engine.getState() });
   }
 
   private handleMessage(message: MessageEvent): void {
@@ -74,14 +77,20 @@ export class GameSocketClient {
     } catch {
       return;
     }
-    if (!isServerToGameEvent(parsed)) {
+    if (!isServerToClientMessage(parsed)) {
       return;
     }
-    const result = handleGameEvent(this.engine, parsed);
-    if (!result.success) {
-      console.warn(
-        `[ws] ${parsed.type} skipped: ${String(result.reason ?? "unknown")}`,
-      );
+    if (isGameCommandPacket(parsed)) {
+      handleGameCommand(this.engine, parsed);
+      return;
+    }
+    if (isServerToGameEvent(parsed)) {
+      const result = handleGameEvent(this.engine, parsed);
+      if (!result.success) {
+        console.warn(
+          `[ws] ${parsed.type} skipped: ${String(result.reason ?? "unknown")}`,
+        );
+      }
     }
   }
 
@@ -91,11 +100,12 @@ export class GameSocketClient {
       return;
     }
     if (state.isActive && !this.wasActive) {
-      this.sendControl({ event: "start_game" });
+      this.send({ type: "start_game" });
     } else if (!state.isActive && this.wasActive) {
-      this.sendControl({ event: "finish_game" });
+      this.send({ type: "finish_game" });
     }
     this.wasActive = state.isActive;
+    this.send({ type: "game_state", payload: state });
   }
 
   private handleClose(): void {
@@ -103,7 +113,9 @@ export class GameSocketClient {
     if (this.closedByUser || this.destroyed) {
       return;
     }
-    console.log(`[ws] disconnected, reconnecting in ${RECONNECT_DELAY_MS}ms`);
+    console.log(
+      `[ws] game disconnected, reconnecting in ${RECONNECT_DELAY_MS}ms`,
+    );
     this.scheduleReconnect();
   }
 
@@ -115,26 +127,9 @@ export class GameSocketClient {
     }, RECONNECT_DELAY_MS);
   }
 
-  private sendControl(packet: ControlPacket): void {
+  private send(message: Record<string, unknown>): void {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(packet));
+      this.socket.send(JSON.stringify(message));
     }
   }
 }
-
-const isServerToGameEvent = (value: unknown): value is ServerToGameEvent => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const event = value as Record<string, unknown>;
-  const type = event.type;
-  if (
-    type === "spawn_tower" ||
-    type === "upgrade_tower" ||
-    type === "upgrade_random_tower" ||
-    type === "spawn_enemy"
-  ) {
-    return typeof event.payload === "object" && event.payload !== null;
-  }
-  return type === "clear_enemies";
-};

@@ -31,3 +31,34 @@
   overflow: hidden;
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.6);
 }
+
+.mode-game {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  overflow: hidden;
+}
+
+.mode-game .game-container {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.mode-dashboard {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0a0c14;
+}
+
+.mode-dashboard .dashboard {
+  flex: 0 0 var(--dashboard-width);
+  max-height: none;
+}

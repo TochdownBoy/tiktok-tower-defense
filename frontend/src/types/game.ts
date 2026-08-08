@@ -94,6 +94,25 @@ export interface SpawnEnemyPayload {
   count: number;
 }
 
+export interface GameState {
+  hp: number;
+  wave: number;
+  enemies: number;
+  towers: number;
+  fps: number;
+  speed: number;
+  isPaused: boolean;
+  isVictory: boolean;
+  isDefeat: boolean;
+  isActive: boolean;
+  currentWave: number;
+  totalWaves: number;
+  waveDurationSeconds: number;
+  remainingWaveSeconds: number;
+}
+
+export type GameStateListener = (state: GameState) => void;
+
 export type ServerToGameEvent =
   | {
       type: "spawn_tower";

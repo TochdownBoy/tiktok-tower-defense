@@ -7,7 +7,7 @@ This file documents the **actual implemented behavior** of the frontend game.
 The backend gift-processing layer and the frontend WebSocket integration are **implemented**.
 
 The frontend connects to the backend WebSocket server through
-`GameSocketClient` (`frontend/src/integration/GameSocketClient.ts`). It translates incoming
+`GameSocketClient` (`frontend/src/network/GameSocketClient.ts`). It translates incoming
 normalized events into calls to the public game API methods without containing game rules itself.
 
 The data flow is:
@@ -30,9 +30,49 @@ The bottom three layers exist today: `GameSocketClient` → `GameEventRouter` �
 methods → game state + PixiJS scene.
 
 The `GameSocketClient` connects to `VITE_WS_URL` (default `ws://<host>:3000`), watches the
-engine's `GameState.isActive` transitions, and sends `{ event: "start_game" }` /
-`{ event: "finish_game" }` control packets to the backend so it can activate and clear its
+engine's `GameState.isActive` transitions, and sends `{ type: "start_game" }` /
+`{ type: "finish_game" }` control packets to the backend so it can activate and clear its
 runtime gift state. It auto-reconnects and re-syncs on reconnect.
+
+## Frontend modes and WebSocket roles
+
+The frontend registers with the backend under a **role** (protocol in `frontend/src/network/types.ts`):
+
+- `?mode=game` — registers as role `game`. Only one game client is allowed; a new one replaces the
+  old. Receives normalized `ServerToGameEvent`s and dashboard `game_command`s. Sends `game_state`
+  snapshots and `start_game`/`finish_game` control packets. `GameView` mounts `GameRuntime`, which
+  owns a single `GameEngine` + `GameSocketClient`; it never needs React game state.
+- `?mode=dashboard` — registers as role `dashboard`. Any number allowed. Never creates a PixiJS
+  instance. `DashboardView` owns its own `DashboardSocketClient` and drives the game remotely
+  through `RemoteDashboardController`, which sends `{ type: "game_command", command, payload? }`
+  packets. The backend routes `game_command`s to the game client, and `GameSocketClient` dispatches
+  them via `GameCommandRouter` (`frontend/src/game/GameCommandRouter.ts`) onto the public API.
+  Commands: `start_game`, `finish_game`, `start_next_wave`, `place_tower`, `sell_tower`,
+  `upgrade_tower`, `spawn_enemy`, `clear_enemies`, `pause`, `resume`, `restart`, `set_speed`.
+- no mode (dev) — combined layout; the `Dashboard` uses `LocalDashboardController`, which calls the
+  same engine in-process through `GameStore` (no WebSocket round trip).
+
+## Live Flow (event simulation) dashboard
+
+The `?mode=dashboard` UI includes a **Live Flow** panel (`frontend/src/dashboard/components/LiveFlowPanel.tsx`)
+that simulates TikTok LIVE events locally and pushes them through the **same** backend pipeline as
+real TikTok events (also reserved in the dev layout, rendered when `import.meta.env.DEV`).
+
+- The panel renders the **real gift catalog**, fetched from the backend on dashboard connect
+  (`{ type: "gift_catalog", payload: string[] }` — `GiftCatalog.getGiftNames()`).
+- Sending an event issues a `{ type: "simulate_tiktok_event", event }` packet from the dashboard
+  role; only dashboards may send it (the backend warns and drops it from other roles).
+- The backend validates the payload with `isTikTokEvent` (`backend/src/live/TikTokEventDispatcher.ts`)
+  and routes it through the same dispatcher used for real `tiktok-live-connector` events:
+  - `gift` → `GiftProcessor.handleGift` (towers / enemies / clear, per the gift catalog);
+  - `like` → `GiftProcessor.handleLike` (enemy spawns once past the like threshold);
+  - `follow` / `comment` / `share` / `member` → logged only (no game action yet).
+- Every event is broadcast to all dashboards as
+  `{ type: "event_log", payload: { timestamp, kind, username, label, detail, note? } }`.
+  While no match is active, gift/like entries carry `note: "ignored: no active match"`.
+- The simulated event shapes are the same normalized `TikTokEvent` union the backend produces for
+  real events (`backend/src/tiktok/TikTokClient.ts`), including `member { uniqueId, nickname }` for
+  viewer joins.
 
 ## Authoritative game state
 
@@ -455,7 +495,7 @@ when no backend is running it logs connection failures and retries every 3 s wit
 the game.
 
 In development (`import.meta.env.DEV`) the active engine is exposed as `window.gameApi`
-(`frontend/src/game/Game.tsx`, declared in `frontend/src/vite-env.d.ts`). Example from the console:
+(`frontend/src/game/GameRuntime.ts`, declared in `frontend/src/vite-env.d.ts`). Example from the console:
 
 ```js
 window.gameApi.startGame();
@@ -467,7 +507,8 @@ window.gameApi.finishGame();
 
 Only existing project types are supported: turrets `Tesla`/`Dendro`/`Frost`; monsters
 `Slime1`–`Slime5`/`Tank`. The `dashboard` also provides Start Game / Next Wave / Finish Game /
-Pause / Resume / Restart / Speed buttons.
+Pause / Resume / Restart / Speed / Clear Enemies buttons. In `?mode=dashboard` those buttons are
+sent as `game_command`s over WebSocket; in dev mode they drive the local engine directly.
 
 ## Verification
 

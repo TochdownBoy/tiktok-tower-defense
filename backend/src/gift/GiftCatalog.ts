@@ -29,9 +29,9 @@ export const DEFAULT_GIFT_CATALOG_CONFIG: GiftCatalogConfig = {
     { enemy: "Tank", weight: 30 },
   ],
   gifts: {
-    Rose: { kind: "enemy", count: 5 },
-    Perfume: { kind: "enemy", count: 25 },
-    Doughnut: { kind: "enemy", count: 50 },
+    Rose: { kind: "enemy", count: 3 },
+    Perfume: { kind: "enemy", count: 10 },
+    Doughnut: { kind: "enemy", count: 20 },
     Tsar: { kind: "clear_enemies" },
     GG: { kind: "tower", tower: "Frost" },
     Football: { kind: "tower", tower: "Dendro" },
@@ -52,6 +52,10 @@ export class GiftCatalog {
 
   lookupGift(giftName: string): GiftAction | null {
     return this.normalizedGifts[normalizeGiftName(giftName)] ?? null;
+  }
+
+  getGiftNames(): string[] {
+    return Object.keys(this.config.gifts);
   }
 
   get maxTowers(): number {

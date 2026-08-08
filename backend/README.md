@@ -12,12 +12,12 @@ npm run dev
 
 ## Scripts
 
-| Command        | Description               |
-| -------------- | ------------------------- |
-| `npm run dev`  | Run in watch mode         |
-| `npm run build`| Compile TypeScript        |
-| `npm start`    | Run compiled server       |
-| `npm run typecheck` | Type-check the code   |
+| Command             | Description         |
+| ------------------- | ------------------- |
+| `npm run dev`       | Run in watch mode   |
+| `npm run build`     | Compile TypeScript  |
+| `npm start`         | Run compiled server |
+| `npm run typecheck` | Type-check the code |
 
 ## Environment Variables
 

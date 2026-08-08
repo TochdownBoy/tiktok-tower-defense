@@ -11,9 +11,13 @@ const ENEMY_TYPES: EnemyType[] = [
 
 interface EnemyControlsProps {
   onSpawnEnemy: (type: EnemyType) => void;
+  onClearEnemies: () => void;
 }
 
-export function EnemyControls({ onSpawnEnemy }: EnemyControlsProps) {
+export function EnemyControls({
+  onSpawnEnemy,
+  onClearEnemies,
+}: EnemyControlsProps) {
   return (
     <section className="panel">
       <h2 className="panel__title">Enemies</h2>
@@ -23,6 +27,11 @@ export function EnemyControls({ onSpawnEnemy }: EnemyControlsProps) {
             Spawn {type}
           </button>
         ))}
+      </div>
+      <div className="button-row">
+        <button type="button" onClick={onClearEnemies}>
+          Clear Enemies
+        </button>
       </div>
     </section>
   );

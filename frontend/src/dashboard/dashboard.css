@@ -124,3 +124,160 @@ button:disabled {
   background: #4e7ec2;
   border-color: #4e7ec2;
 }
+
+.live-flow {
+  margin-top: 16px;
+  max-width: 1000px;
+  border: 2px solid rgba(159, 214, 255, 0.35);
+  background: rgba(20, 26, 40, 0.9);
+}
+
+.live-flow__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.live-flow__status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot--ok {
+  background: #3ddc84;
+  box-shadow: 0 0 6px #3ddc84;
+}
+
+.status-dot--err {
+  background: #ff5b5b;
+  box-shadow: 0 0 6px #ff5b5b;
+}
+
+.live-flow__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.live-flow input {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #1a2030;
+  color: #ffffff;
+  font-family: inherit;
+}
+
+.live-flow .field {
+  margin-bottom: 8px;
+}
+
+.gift-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.gift-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.gift-row > button:first-child {
+  text-align: left;
+}
+
+.quantity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.quantity-row input {
+  flex: 1 1 60px;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.log-header .panel__title {
+  margin-bottom: 0;
+}
+
+.live-flow__log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.live-flow__log-empty {
+  color: #9aa4b8;
+  font-size: 12px;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+}
+
+.log-entry__time {
+  color: #9aa4b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-entry__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.log-entry__label {
+  color: #ffffff;
+}
+
+.log-entry__user {
+  color: #9fd6ff;
+}
+
+.log-entry__detail {
+  color: #ffd479;
+}
+
+.log-entry__note {
+  color: #9aa4b8;
+  font-style: italic;
+}
+
+.stress-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}

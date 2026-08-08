@@ -28,6 +28,8 @@ import { WaveManager } from "../managers/WaveManager";
 import type { EnemyType } from "../types/enemy";
 import type { SpotInfoType } from "../types/spot";
 import type { TowerType } from "../types/tower";
+import type { GameState, GameStateListener } from "../types/game";
+export type { GameState, GameStateListener } from "../types/game";
 import type {
   GameActionResult,
   MonsterActionResult,
@@ -43,25 +45,6 @@ import type {
   UpgradeTowerPayload,
 } from "../types/game";
 import { formatTimer } from "../utils/formatTime";
-
-export interface GameState {
-  hp: number;
-  wave: number;
-  enemies: number;
-  towers: number;
-  fps: number;
-  speed: number;
-  isPaused: boolean;
-  isVictory: boolean;
-  isDefeat: boolean;
-  isActive: boolean;
-  currentWave: number;
-  totalWaves: number;
-  waveDurationSeconds: number;
-  remainingWaveSeconds: number;
-}
-
-export type GameStateListener = (state: GameState) => void;
 
 const PORTAL_SPIN_SPEED = 0.4;
 
